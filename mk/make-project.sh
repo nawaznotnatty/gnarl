@@ -3,7 +3,10 @@
 project="$1"
 src="src/$project"
 
-if [ "$(basename $(pwd))" != gnarl ]; then
+# Verify we are at the top level of the repository by checking for its
+# structure rather than the directory name, so the build works regardless
+# of what the clone directory is called (e.g. "gnarl-1").
+if [ ! -f mk/make-project.sh ] || [ ! -d src ]; then
     echo "script must be run from the top-level gnarl directory"
     exit 1
 fi

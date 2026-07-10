@@ -25,7 +25,10 @@
 
 static uint8_t custom_name[CUSTOM_NAME_SIZE];
 
-void ble_store_ram_init(void);
+// Provided by ESP-IDF's NimBLE config store (host/store/config). Persists
+// bonding data to NVS when CONFIG_BT_NIMBLE_NVS_PERSIST=y. Replaces the
+// upstream ble_store_ram_init(), which ESP-IDF compiles out (BLE_USED_IN_IDF).
+void ble_store_config_init(void);
 
 #define B0(x)	((x) & 0xFF)
 #define B1(x)	(((x) >> 8) & 0xFF)
@@ -150,7 +153,8 @@ static void advertise(void) {
 	fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
 
 	const char *name = ble_svc_gap_device_name();
-	strncpy(short_name, name, sizeof(short_name));
+	strncpy(short_name, name, sizeof(short_name) - 1);
+	short_name[sizeof(short_name) - 1] = '\0';
 	fields.name = (uint8_t *)short_name;
 	fields.name_len = strlen(short_name);
 	if (strlen(name) <= 5) {
@@ -351,18 +355,27 @@ static int data_access(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
 
 static void read_custom_name(void) {
 	ESP_LOGD(TAG, "read_custom_name from nvs (forcing GAP_NAME)");
+	/* We always advertise as GAP_NAME so the device is recognized as a
+	   RileyLink. Keep GAP_NAME in RAM and persist it to NVS only when the
+	   stored value differs, to avoid wearing the flash on every boot. */
+	strncpy((char *)custom_name, GAP_NAME, CUSTOM_NAME_SIZE - 1);
+	custom_name[CUSTOM_NAME_SIZE - 1] = '\0';
+
 	nvs_handle my_handle;
 	esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "read_custom_name: nvs_open: %s", esp_err_to_name(err));
-		/* Fall back to GAP_NAME in RAM */
-		strncpy((char *)custom_name, GAP_NAME, CUSTOM_NAME_SIZE - 1);
-		custom_name[CUSTOM_NAME_SIZE - 1] = '\0';
 		return;
 	}
-	/* Force the GAP_NAME into NVS so that the device advertises as RileyLink RFSpy */
-	strncpy((char *)custom_name, GAP_NAME, CUSTOM_NAME_SIZE - 1);
-	custom_name[CUSTOM_NAME_SIZE - 1] = '\0';
+	uint8_t stored[CUSTOM_NAME_SIZE];
+	size_t stored_size = sizeof(stored);
+	err = nvs_get_blob(my_handle, "custom_name", stored, &stored_size);
+	if (err == ESP_OK && stored_size == CUSTOM_NAME_SIZE &&
+	    memcmp(stored, custom_name, CUSTOM_NAME_SIZE) == 0) {
+		ESP_LOGD(TAG, "NVS already holds GAP_NAME: %s", custom_name);
+		nvs_close(my_handle);
+		return;
+	}
 	esp_err_t e = nvs_set_blob(my_handle, "custom_name", custom_name, CUSTOM_NAME_SIZE);
 	if (e != ESP_OK) {
 		ESP_LOGE(TAG, "read_custom_name: nvs_set_blob: %s", esp_err_to_name(e));
@@ -485,6 +498,6 @@ void gnarl_init(void) {
 	int err = ble_svc_gap_device_name_set((char *)GAP_NAME);
 	assert(!err);
 
-	ble_store_ram_init();
+	ble_store_config_init();
 	nimble_port_freertos_init(host_task);
 }
