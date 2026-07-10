@@ -13,6 +13,12 @@ void app_main(void) {
 	ESP_LOGD(TAG, "radio version %d.%d", version_major(v), version_minor(v));
 	set_frequency(PUMP_FREQUENCY);
 	ESP_LOGD(TAG, "frequency set to %lu Hz", read_frequency());
+
+#ifdef OLED_ENABLE
 	display_init();
+#else
+	ESP_LOGI(TAG, "OLED disabled; skipping display_init()");
+#endif
+
 	gnarl_init();
 }
