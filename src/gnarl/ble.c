@@ -17,7 +17,8 @@
 #include "display.h"
 
 #define MAX_DATA		150
-#define DEFAULT_NAME		"GNARL"
+#define DEFAULT_NAME		"RileyLink"
+#define GAP_NAME		"RileyLink RFSpy"
 
 #define CUSTOM_NAME_SIZE	30
 #define STORAGE_NAMESPACE	"GNARL"
@@ -349,22 +350,29 @@ static int data_access(uint16_t conn_handle, uint16_t attr_handle, struct ble_ga
 }
 
 static void read_custom_name(void) {
-	ESP_LOGD(TAG, "read_custom_name from nvs");
+	ESP_LOGD(TAG, "read_custom_name from nvs (forcing GAP_NAME)");
 	nvs_handle my_handle;
 	esp_err_t err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "read_custom_name: nvs_open: %s", esp_err_to_name(err));
+		/* Fall back to GAP_NAME in RAM */
+		strncpy((char *)custom_name, GAP_NAME, CUSTOM_NAME_SIZE - 1);
+		custom_name[CUSTOM_NAME_SIZE - 1] = '\0';
 		return;
 	}
-	size_t required_size = CUSTOM_NAME_SIZE;
-	err = nvs_get_blob(my_handle, "custom_name", custom_name, &required_size);
-	if (err == ESP_ERR_NVS_NOT_FOUND) {
-		strcpy((char *)custom_name, DEFAULT_NAME);
-		ESP_LOGD(TAG, "set default custom name: %s", custom_name);
-	} else if (err != ESP_OK) {
-		ESP_LOGE(TAG, "read_custom_name: nvs_get_blob: %s", esp_err_to_name(err));
+	/* Force the GAP_NAME into NVS so that the device advertises as RileyLink RFSpy */
+	strncpy((char *)custom_name, GAP_NAME, CUSTOM_NAME_SIZE - 1);
+	custom_name[CUSTOM_NAME_SIZE - 1] = '\0';
+	esp_err_t e = nvs_set_blob(my_handle, "custom_name", custom_name, CUSTOM_NAME_SIZE);
+	if (e != ESP_OK) {
+		ESP_LOGE(TAG, "read_custom_name: nvs_set_blob: %s", esp_err_to_name(e));
 	} else {
-		ESP_LOGD(TAG, "read_custom_name success: %s", custom_name);
+		e = nvs_commit(my_handle);
+		if (e != ESP_OK) {
+			ESP_LOGE(TAG, "read_custom_name: nvs_commit: %s", esp_err_to_name(e));
+		} else {
+			ESP_LOGD(TAG, "wrote GAP_NAME to NVS: %s", custom_name);
+		}
 	}
 	nvs_close(my_handle);
 }
@@ -474,7 +482,7 @@ void gnarl_init(void) {
 
 	read_custom_name();
 
-	int err = ble_svc_gap_device_name_set((char *)custom_name);
+	int err = ble_svc_gap_device_name_set((char *)GAP_NAME);
 	assert(!err);
 
 	ble_store_ram_init();

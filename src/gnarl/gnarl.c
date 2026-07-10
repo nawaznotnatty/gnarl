@@ -357,6 +357,7 @@ static void gnarl_loop(void *unused) {
 	esp_task_wdt_add(0);
 	const int timeout_ms = 60*MILLISECONDS;
 	for (;;) {
+		esp_task_wdt_reset();
 		rfspy_request_t req;
 		if (!xQueueReceive(request_queue, &req, pdMS_TO_TICKS(timeout_ms))) {
 			continue;
