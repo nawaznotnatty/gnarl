@@ -1,3 +1,9 @@
 {
-    "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.5.4/"
+    "idf.currentSetup": "C:/Espressif/frameworks/esp-idf-v5.5.4/",
+"claudeCode.environmentVariables": [
+  { "name": "ANTHROPIC_BASE_URL", "value": "http://localhost:8082" },
+  { "name": "ANTHROPIC_AUTH_TOKEN", "value": "freecc" },
+  { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },
+  { "name": "CLAUDE_CODE_AUTO_COMPACT_WINDOW", "value": "190000" }
+]
 }

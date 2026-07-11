@@ -177,16 +177,20 @@ static void advertise(void) {
 	assert(!err);
 
 	if (!fields.name_is_complete) {
-		// Not sure if we have to set the flags again.
-		// We should determine and check the maximum
-		// length here as well to prevent crashing.
-		fields_ext.flags = fields.flags;
+		// The full name doesn't fit alongside the 128-bit service UUID in the
+		// 31-byte advertisement, so put it in the SCAN RESPONSE instead. This
+		// keeps the service UUID in the primary advertisement, which is what
+		// Loop / AndroidAPS scan for when discovering a RileyLink. (Do NOT call
+		// ble_gap_adv_set_fields() again here: it would overwrite the primary
+		// advertisement and drop the service UUID, making the device
+		// undiscoverable.) Flags belong only in the advertisement, not the
+		// scan response, so fields_ext carries just the complete name.
 		fields_ext.name = (uint8_t *)name;
 		fields_ext.name_len = strlen(name);
 		fields_ext.name_is_complete = 1;
-		int err = ble_gap_adv_set_fields(&fields_ext);
+		int err = ble_gap_adv_rsp_set_fields(&fields_ext);
 		if (err) {
-			ESP_LOGE(TAG, "ble_gap_adv_set_fields fields_ext, name might be too long, err %d", err);
+			ESP_LOGE(TAG, "ble_gap_adv_rsp_set_fields err %d (name too long?)", err);
 		}
 		// Do not crash, but keep going. It is hard to recover otherwise.
 	}
