@@ -84,21 +84,12 @@ static statistics_cmd_t statistics;
 
 static response_packet_t rx_buf;
 
-static inline void swap_bytes(uint8_t *p, uint8_t *q) {
-	uint8_t t = *p;
-	*p = *q;
-	*q = t;
+static inline uint16_t reverse_two_bytes(uint16_t n) {
+	return __builtin_bswap16(n);
 }
 
-static inline void reverse_two_bytes(uint16_t *n) {
-	uint8_t *p = (uint8_t *)n;
-	swap_bytes(&p[0], &p[1]);
-}
-
-static inline void reverse_four_bytes(uint32_t *n) {
-	uint8_t *p = (uint8_t *)n;
-	swap_bytes(&p[0], &p[3]);
-	swap_bytes(&p[1], &p[2]);
+static inline uint32_t reverse_four_bytes(uint32_t n) {
+	return __builtin_bswap32(n);
 }
 
 // 71-byte long packet encodes to 107 bytes.
@@ -172,7 +163,7 @@ static volatile int in_get_packet = 0;
 
 static void get_packet(const uint8_t *buf, int len) {
 	get_packet_cmd_t *p = (get_packet_cmd_t *)buf;
-	reverse_four_bytes(&p->timeout_ms);
+	p->timeout_ms = reverse_four_bytes(p->timeout_ms);
 	ESP_LOGD(TAG, "get_packet: listen_channel %d timeout_ms %lu",
 		 p->listen_channel, p->timeout_ms);
 	in_get_packet = 1;
@@ -183,7 +174,7 @@ static void get_packet(const uint8_t *buf, int len) {
 
 static void send_packet(const uint8_t *buf, int len) {
 	send_packet_cmd_t *p = (send_packet_cmd_t *)buf;
-	reverse_two_bytes(&p->delay_ms);
+	p->delay_ms = reverse_two_bytes(p->delay_ms);
 	ESP_LOGD(TAG, "send_packet: len %d send_channel %d repeat_count %d delay_ms %d",
 		 len, p->send_channel, p->repeat_count, p->delay_ms);
 	len -= (p->packet - (uint8_t *)p);
@@ -193,9 +184,9 @@ static void send_packet(const uint8_t *buf, int len) {
 
 static void send_and_listen(const uint8_t *buf, int len) {
 	send_and_listen_cmd_t *p = (send_and_listen_cmd_t *)buf;
-	reverse_two_bytes(&p->delay_ms);
-	reverse_four_bytes(&p->timeout_ms);
-	reverse_two_bytes(&p->preamble_ms);
+	p->delay_ms = reverse_two_bytes(p->delay_ms);
+	p->timeout_ms = reverse_four_bytes(p->timeout_ms);
+	p->preamble_ms = reverse_two_bytes(p->preamble_ms);
 	ESP_LOGD(TAG, "send_and_listen: len %d send_channel %d repeat_count %d delay_ms %d",
 		 len, p->send_channel, p->repeat_count, p->delay_ms);
 	ESP_LOGD(TAG, "send_and_listen: listen_channel %d timeout_ms %lu retry_count %d",
@@ -303,9 +294,9 @@ static void send_stats() {
 	ESP_LOGD(TAG, "send_stats len %d uptime %lu rx %d tx %d",
 		 sizeof(statistics), statistics.uptime,
 		 statistics.packet_rx_count, statistics.packet_tx_count);
-	reverse_four_bytes(&statistics.uptime);
-	reverse_two_bytes(&statistics.packet_rx_count);
-	reverse_two_bytes(&statistics.packet_tx_count);
+	statistics.uptime = reverse_four_bytes(statistics.uptime);
+	statistics.packet_rx_count = reverse_two_bytes(statistics.packet_rx_count);
+	statistics.packet_tx_count = reverse_two_bytes(statistics.packet_tx_count);
 	send_bytes((const uint8_t *)&statistics, sizeof(statistics));
 }
 
