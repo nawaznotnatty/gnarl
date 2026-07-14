@@ -5,5 +5,10 @@
   { "name": "ANTHROPIC_AUTH_TOKEN", "value": "freecc" },
   { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },
   { "name": "CLAUDE_CODE_AUTO_COMPACT_WINDOW", "value": "190000" }
+],
+"idf.portWin": "COM5",
+"idf.openOcdConfigs": [
+    "interface/ftdi/esp32_devkitj_v1.cfg",
+    "target/esp32.cfg"
 ]
 }

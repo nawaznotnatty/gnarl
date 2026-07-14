@@ -25,6 +25,7 @@ char *http_get(esp_http_client_handle_t client, const char *endpoint) {
 	int len = content_length;
 	if (len == -1) {
 		ESP_LOGE(TAG, "esp_http_client_fetch_headers: failure");
+		esp_http_client_close(client);
 		return 0;
 	}
 	if (len >= sizeof(response)) {
@@ -43,6 +44,7 @@ char *http_get(esp_http_client_handle_t client, const char *endpoint) {
 		len -= n;
         }
 	*p = 0;
+	esp_http_client_close(client);
 	return err == ESP_OK ? response : 0;
 }
 

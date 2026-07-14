@@ -29,8 +29,8 @@ static void handle_wifi_event(void* arg, esp_event_base_t event_base, int32_t ev
 		break;
 	case WIFI_EVENT_STA_DISCONNECTED:
 		ESP_LOGD(TAG, "WIFI_EVENT STA_DISCONNECTED");
-		if (arg != 0) {
-			wifi_event_sta_disconnected_t *d = arg;
+		if (event_data != NULL) {
+			wifi_event_sta_disconnected_t *d = event_data;
 			ESP_LOGD(TAG, "reason = %d", d->reason);
 		}
 		if (retry_num == MAX_RETRIES) {
